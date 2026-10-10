@@ -1,0 +1,38 @@
+最小必要修改建议（当前未直接修改后端代码）：
+
+1. UserDao.java 第59行
+修改前：SELECT * FROM users WHERE (username = ? OR email = ? OR phone = ?) AND password = ?
+修改后：SELECT * FROM users WHERE (username = ? OR email = ? OR phone = ?) AND password = ? AND status = 1 AND is_deleted = 0
+原因：禁止禁用或逻辑删除账号登录。
+
+2. KnowledgeDao.java 第56、84、111、140、198行及 UserDao.java 第96、129、211行
+修改前：查询未统一过滤 is_deleted，删除直接 DELETE。
+修改后：业务查询增加 is_deleted = 0；删除改为 UPDATE ... SET is_deleted = 1 WHERE id = ? AND is_deleted = 0。
+原因：实现数据库字段约定的逻辑删除，阻止已删除记录泄露。
+
+3. KnowledgeDao.java 第111行
+修改前：WHERE k.id = ?
+修改后：WHERE k.id = ? AND k.status = 1 AND k.is_deleted = 0
+原因：游客详情仅能读取审核通过知识。若管理员/作者需预览，应新增鉴权查询方法，不应复用公开接口。
+
+4. KnowledgeServlet.java 第153-156行
+修改前：忽略 favoriteService.removeFavorite 返回值并固定返回 success。
+修改后：根据 boolean success 返回 success 或 fail（提示“未收藏或取消失败”）。
+原因：保证接口结果与数据库实际操作一致。
+
+5. AdminUserServlet.java 第64、69、92行及 KnowledgeServlet.java 的 ID 转换处
+修改前：直接 Long.parseLong。
+修改后：捕获 NumberFormatException，返回 flag=fail 和“ID格式错误”。
+原因：防止非法输入造成 500。
+
+6. KnowledgeServlet.java 第228行
+修改前：int status = "approve".equals(auditAction) ? 1 : 2;
+修改后：仅 approve/reject 两个值分别映射 1/2，其他值返回 fail。
+原因：非法审核动作不能改变数据。
+
+7. UserService.java / AdminUserServlet.java（修改入口前）
+修改前：管理员更新直接执行 UPDATE。
+修改后：排除当前 id 后校验 username/email/phone 唯一性，并返回具体冲突字段。
+原因：消除数据库异常并提供明确业务反馈。
+
+说明：除上述最小修复外，不建议大范围改动既有业务代码；密码明文存储属于上线前必须另行规划的安全改造。

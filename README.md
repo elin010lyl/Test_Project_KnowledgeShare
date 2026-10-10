@@ -4,7 +4,7 @@
 
 ## 🛠 技术栈
 - 后端被测服务：Java Servlet、Tomcat 9
-- 数据库：MySQL 8（Navicat作为可视化客户端）
+- 数据库：MySQL 8（Navicat作可视化）
 - 手工测试：Postman、Excel
 - 接口自动化：Python、pytest、requests
 - 测试报告：Allure
